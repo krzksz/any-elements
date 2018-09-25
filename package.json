@@ -1,0 +1,55 @@
+{
+  "name": "kompot",
+  "version": "1.0.0",
+  "description": "Super simple component library based on MutationObserver.",
+  "main": "dist/kompot.js",
+  "author": "Krzksz",
+  "license": "MIT",
+  "private": true,
+  "umd:main": "dist/kompot.umd.js",
+  "module": "dist/kompot.mjs",
+  "source": "src/kompot.js",
+  "scripts": {
+    "build": "microbundle",
+    "dev": "microbundle watch",
+    "precommit": "lint-staged"
+  },
+  "dependencies": {
+    "microbundle": "^0.6.0"
+  },
+  "lint-staged": {
+    "*.{js,json}": [
+      "prettier",
+      "eslint",
+      "git add"
+    ]
+  },
+  "devDependencies": {
+    "eslint-config-prettier": "^3.1.0",
+    "eslint-plugin-prettier": "^2.6.2",
+    "husky": "^1.0.0-rc.15",
+    "lint-staged": "^7.3.0",
+    "prettier": "^1.14.3"
+  },
+  "prettier": {
+    "trailingComma": "es5",
+    "overrides": [
+      {
+        "files": ".prettierrc",
+        "options": {
+          "parser": "json"
+        }
+      }
+    ]
+  },
+  "eslint": {
+    "extends": [
+      "eslint:recommended",
+      "prettier",
+      "plugin:prettier/recommended"
+    ],
+    "plugins": [
+      "prettier"
+    ]
+  }
+}
