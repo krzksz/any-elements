@@ -13,8 +13,7 @@
     "build": "microbundle",
     "dev": "microbundle watch",
     "test": "jest",
-    "test:browser": "karma start karma.conf.js",
-    "precommit": "lint-staged"
+    "test:browser": "karma start karma.conf.js"
   },
   "dependencies": {},
   "devDependencies": {
@@ -77,5 +76,10 @@
   "eslintIgnore": [
     "dist/**/*.js",
     ""
-  ]
+  ],
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  }
 }
