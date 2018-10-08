@@ -12,24 +12,38 @@
   "scripts": {
     "build": "microbundle",
     "dev": "microbundle watch",
+    "test": "jest",
+    "test:browser": "karma start karma.conf.js",
     "precommit": "lint-staged"
   },
-  "dependencies": {
-    "microbundle": "^0.6.0"
+  "dependencies": {},
+  "devDependencies": {
+    "babel-preset-env": "^1.7.0",
+    "eslint": "^5.6.1",
+    "eslint-config-prettier": "^3.1.0",
+    "eslint-plugin-prettier": "^3.0.0",
+    "husky": "^1.1.1",
+    "jest": "^23.6.0",
+    "lint-staged": "^7.3.0",
+    "microbundle": "^0.6.0",
+    "mutationobserver-shim": "^0.3.2",
+    "prettier": "^1.14.3"
   },
   "lint-staged": {
-    "*.{js,json}": [
+    "*.json": [
+      "prettier",
+      "git add"
+    ],
+    "*.js": [
       "prettier",
       "eslint",
       "git add"
     ]
   },
-  "devDependencies": {
-    "eslint-config-prettier": "^3.1.0",
-    "eslint-plugin-prettier": "^2.6.2",
-    "husky": "^1.0.0-rc.15",
-    "lint-staged": "^7.3.0",
-    "prettier": "^1.14.3"
+  "babel": {
+    "presets": [
+      "env"
+    ]
   },
   "prettier": {
     "trailingComma": "es5",
@@ -42,7 +56,15 @@
       }
     ]
   },
-  "eslint": {
+  "eslintConfig": {
+    "parserOptions": {
+      "ecmaVersion": 6,
+      "sourceType": "module"
+    },
+    "env": {
+      "browser": true,
+      "jest": true
+    },
     "extends": [
       "eslint:recommended",
       "prettier",
@@ -51,5 +73,9 @@
     "plugins": [
       "prettier"
     ]
-  }
+  },
+  "eslintIgnore": [
+    "dist/**/*.js",
+    ""
+  ]
 }
