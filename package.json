@@ -1,19 +1,18 @@
 {
-  "name": "kompot",
+  "name": "smoll",
   "version": "1.0.0",
   "description": "Super simple component library based on MutationObserver.",
-  "main": "dist/kompot.js",
+  "main": "dist/smoll.js",
   "author": "Krzksz",
   "license": "MIT",
   "private": true,
-  "umd:main": "dist/kompot.umd.js",
-  "module": "dist/kompot.mjs",
-  "source": "src/kompot.js",
+  "umd:main": "dist/smoll.umd.js",
+  "module": "dist/smoll.mjs",
+  "source": "src/smoll.js",
   "scripts": {
-    "build": "microbundle",
+    "build": "microbundle --sourcemap false --target web",
     "dev": "microbundle watch",
-    "test": "jest",
-    "test:browser": "karma start karma.conf.js"
+    "test": "jest"
   },
   "dependencies": {},
   "devDependencies": {
@@ -23,8 +22,8 @@
     "eslint-plugin-prettier": "^3.0.0",
     "husky": "^1.1.1",
     "jest": "^23.6.0",
-    "lint-staged": "^7.3.0",
-    "microbundle": "^0.6.0",
+    "lint-staged": "^8.1.0",
+    "microbundle": "^0.9.0",
     "mutationobserver-shim": "^0.3.2",
     "prettier": "^1.14.3"
   },
@@ -45,15 +44,7 @@
     ]
   },
   "prettier": {
-    "trailingComma": "es5",
-    "overrides": [
-      {
-        "files": ".prettierrc",
-        "options": {
-          "parser": "json"
-        }
-      }
-    ]
+    "trailingComma": "es5"
   },
   "eslintConfig": {
     "parserOptions": {
@@ -68,14 +59,10 @@
       "eslint:recommended",
       "prettier",
       "plugin:prettier/recommended"
-    ],
-    "plugins": [
-      "prettier"
     ]
   },
   "eslintIgnore": [
-    "dist/**/*.js",
-    ""
+    "dist/**/*.js"
   ],
   "husky": {
     "hooks": {

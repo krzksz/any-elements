@@ -1,15 +1,11 @@
-import * as config from "./config";
-
-if (!Element.prototype.matches) {
-  Element.prototype.matches = Element.prototype.msMatchesSelector;
-}
-
 let registeredComponents = [];
 let observer = null;
 
 const init = (element, component) => {
-  element.setAttribute(config.attributeName, component.name);
-  element[config.propertyName] = new component.constructor(element);
+  if (element._smoll) {
+    return;
+  }
+  new component.constructor(element);
 };
 
 const initAll = parentNode => {
@@ -18,35 +14,31 @@ const initAll = parentNode => {
   }
 
   registeredComponents.forEach(component => {
-    if (
-      parentNode.matches(`${component.selector}:not([${config.attributeName}])`)
-    ) {
+    if (parentNode.matches(component.selector)) {
       init(parentNode, component);
     }
 
-    const matchedElements = parentNode.querySelectorAll(
-      `${component.selector}:not([${config.attributeName}])`
-    );
+    const matchedElements = parentNode.querySelectorAll(component.selector);
     for (let i = 0; i < matchedElements.length; i++) {
       init(matchedElements[i], component);
     }
   });
 };
 
-const register = (selector, name, constructor) => {
-  registeredComponents.push({ selector, name, constructor });
+const register = (selector, constructor) => {
+  registeredComponents.push({ selector, constructor });
 };
 
-const unregister = (selector, name) => {
-  registeredComponents = registeredComponents.filter(component => {
-    return component.selector !== selector && component.name !== name;
-  });
+const unregister = selector => {
+  registeredComponents = registeredComponents.filter(
+    component => component.selector !== selector
+  );
 };
 
 const destruct = componentElement => {
-  componentElement.removeAttribute(config.attributeName);
-  const componentToDestruct = componentElement[config.propertyName];
-  componentToDestruct.destructor();
+  if (componentElement._smoll) {
+    componentElement._smoll.destructor();
+  }
 };
 
 const destructAll = parentNode => {
@@ -54,15 +46,10 @@ const destructAll = parentNode => {
     return;
   }
 
-  if (parentNode.hasAttribute(config.attributeName)) {
-    destruct(parentNode);
-  }
+  destruct(parentNode);
 
-  const matchedElements = parentNode.querySelectorAll(
-    `[${config.attributeName}]`
-  );
-  const matchedElementsLength = matchedElements.length;
-  for (let i = 0; i < matchedElementsLength; i++) {
+  const matchedElements = parentNode.querySelectorAll(`*`);
+  for (let i = 0; i < matchedElements.length; i++) {
     destruct(matchedElements[i]);
   }
 };
@@ -70,14 +57,12 @@ const destructAll = parentNode => {
 const mutationCallback = mutationsList => {
   mutationsList.forEach(mutation => {
     const removedNodes = mutation.removedNodes;
-    const removedNodesLength = removedNodes.length;
-    for (let i = 0; i < removedNodesLength; i++) {
+    for (let i = 0; i < removedNodes.length; i++) {
       destructAll(removedNodes[i]);
     }
 
     const addedNodes = mutation.addedNodes;
-    const addedNodesLength = addedNodes.length;
-    for (let i = 0; i < addedNodesLength; i++) {
+    for (let i = 0; i < addedNodes.length; i++) {
       initAll(addedNodes[i]);
     }
   });
@@ -92,10 +77,11 @@ const attach = (rootNode = document.body) => {
   initAll(rootNode);
 };
 
-const detach = () => {
+const detach = (rootNode = document.body) => {
   if (observer) {
     observer.disconnect();
     observer = null;
+    destructAll(rootNode);
   }
 };
 
