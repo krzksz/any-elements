@@ -138,3 +138,6 @@ $RECYCLE.BIN/
 
 
 # End of https://www.gitignore.io/api/osx,node,windows,visualstudiocode
+
+.rts2_cache_*
+mangle.json

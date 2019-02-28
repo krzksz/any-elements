@@ -1,31 +1,48 @@
 {
-  "name": "smoll",
+  "name": "any-elements",
   "version": "1.0.0",
-  "description": "Super simple component library based on MutationObserver.",
-  "main": "dist/smoll.js",
-  "author": "Krzksz",
+  "description": "Lightweight component library build to enable custom elements like features for any selectors you like.",
+  "main": "dist/anyElements.js",
+  "author": "Mateusz Krzeszowiak <mateusz.krzeszowiak@gmail.com",
   "license": "MIT",
   "private": true,
-  "umd:main": "dist/smoll.umd.js",
-  "module": "dist/smoll.mjs",
-  "source": "src/smoll.js",
+  "umd:main": "dist/anyElements.umd.js",
+  "module": "dist/anyElements.mjs",
+  "source": "src/anyElements.ts",
   "scripts": {
-    "build": "microbundle --sourcemap false --target web",
-    "dev": "microbundle watch",
-    "test": "jest"
+    "build": "microbundle",
+    "dev": "microbundle -w",
+    "test": "karma start --single-run",
+    "test:dev": "karma start --auto-watch"
   },
-  "dependencies": {},
+  "files": [
+    "src",
+    "dist"
+  ],
   "devDependencies": {
-    "babel-preset-env": "^1.7.0",
+    "@babel/core": "^7.3.4",
+    "@babel/polyfill": "^7.2.5",
+    "@babel/preset-env": "^7.3.4",
     "eslint": "^5.6.1",
-    "eslint-config-prettier": "^3.1.0",
+    "eslint-config-prettier": "^4.0.0",
     "eslint-plugin-prettier": "^3.0.0",
     "husky": "^1.1.1",
-    "jest": "^23.6.0",
+    "jasmine-core": "^3.3.0",
+    "karma": "^4.0.0",
+    "karma-babel-preprocessor": "^8.0.0",
+    "karma-chrome-launcher": "^2.2.0",
+    "karma-coverage": "^1.1.2",
+    "karma-edge-launcher": "^0.4.2",
+    "karma-firefox-launcher": "^1.1.0",
+    "karma-ie-launcher": "^1.0.0",
+    "karma-jasmine": "^2.0.1",
     "lint-staged": "^8.1.0",
-    "microbundle": "^0.9.0",
-    "mutationobserver-shim": "^0.3.2",
+    "microbundle": "^0.10.1",
+    "npm-run-all": "^4.1.5",
     "prettier": "^1.14.3"
+  },
+  "mangle": {
+    "regex": "^_"
   },
   "lint-staged": {
     "*.json": [
@@ -40,7 +57,7 @@
   },
   "babel": {
     "presets": [
-      "env"
+      "@babel/preset-env"
     ]
   },
   "prettier": {
@@ -48,12 +65,13 @@
   },
   "eslintConfig": {
     "parserOptions": {
-      "ecmaVersion": 6,
+      "ecmaVersion": 8,
       "sourceType": "module"
     },
     "env": {
       "browser": true,
-      "jest": true
+      "jasmine": true,
+      "es6": true
     },
     "extends": [
       "eslint:recommended",
@@ -62,7 +80,8 @@
     ]
   },
   "eslintIgnore": [
-    "dist/**/*.js"
+    "dist/**/*.js",
+    "karma.conf.js"
   ],
   "husky": {
     "hooks": {
