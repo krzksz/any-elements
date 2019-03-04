@@ -11,7 +11,7 @@ const until = condition => {
   return new Promise(resolve => check(condition, resolve));
 };
 
-const anyElements = window.anyElements;
+const AnyElements = window.AnyElements;
 
 if (!Element.prototype.matches) {
   Element.prototype.matches =
@@ -19,51 +19,51 @@ if (!Element.prototype.matches) {
     Element.prototype.webkitMatchesSelector;
 }
 
-describe("anyElements", () => {
+describe("AnyElements", () => {
   afterEach(() => {
-    if (anyElements.get("foo-bar")) {
-      anyElements.undefine("foo-bar");
+    if (AnyElements.get("foo-bar")) {
+      AnyElements.undefine("foo-bar");
     }
     document.body.innerHTML = "";
   });
 
   it("is an object", () => {
-    expect(typeof anyElements).toBe("object");
+    expect(typeof AnyElements).toBe("object");
   });
 
   describe("define method", () => {
     it("is a function", () => {
-      expect(typeof anyElements.define).toBe("function");
+      expect(typeof AnyElements.define).toBe("function");
     });
 
     it("throws when name is not provided", () => {
-      expect(() => anyElements.define()).toThrow();
+      expect(() => AnyElements.define()).toThrow();
     });
 
     it("throws when name contains uppercase letters", () => {
-      expect(() => anyElements.define("fOo-bAr")).toThrow();
+      expect(() => AnyElements.define("fOo-bAr")).toThrow();
     });
 
     it("throws when name doesn't start with a letter", () => {
-      expect(() => anyElements.define("-foo-bar")).toThrow();
+      expect(() => AnyElements.define("-foo-bar")).toThrow();
     });
 
     it("throws when name doesn't contain a hyphen", () => {
-      expect(() => anyElements.define("foobar")).toThrow();
+      expect(() => AnyElements.define("foobar")).toThrow();
     });
 
     it("throws DOMException when component is already defined", () => {
-      anyElements.define("foo-bar", {});
+      AnyElements.define("foo-bar", {});
 
-      expect(() => anyElements.define("foo-bar", {})).toThrow();
+      expect(() => AnyElements.define("foo-bar", {})).toThrow();
     });
 
     it("resolves promises from whenDefined", async () => {
       const promise = Promise.all([
-        anyElements.whenDefined("foo-bar"),
-        anyElements.whenDefined("foo-bar"),
+        AnyElements.whenDefined("foo-bar"),
+        AnyElements.whenDefined("foo-bar"),
       ]);
-      anyElements.define("foo-bar", {});
+      AnyElements.define("foo-bar", {});
 
       await expectAsync(promise).toBeResolved();
     });
@@ -71,70 +71,70 @@ describe("anyElements", () => {
 
   describe("get method", () => {
     it("is a function", () => {
-      expect(typeof anyElements.get).toBe("function");
+      expect(typeof AnyElements.get).toBe("function");
     });
 
     it("returns undefined for undefined component", () => {
-      expect(anyElements.get("foo-bar")).toBe(undefined);
+      expect(AnyElements.get("foo-bar")).toBe(undefined);
     });
 
     it("returns constructor for component defined with constructor", () => {
       class FooBar {}
-      anyElements.define("foo-bar", FooBar);
-      expect(anyElements.get("foo-bar")).toBe(FooBar);
+      AnyElements.define("foo-bar", FooBar);
+      expect(AnyElements.get("foo-bar")).toBe(FooBar);
     });
 
     it("returns function for component defined with function", () => {
       const fooBar = () => class FooBar {};
-      anyElements.define("foo-bar", fooBar);
-      expect(anyElements.get("foo-bar")).toBe(fooBar);
+      AnyElements.define("foo-bar", fooBar);
+      expect(AnyElements.get("foo-bar")).toBe(fooBar);
     });
 
     it("returns promise for component defined with promise", () => {
       const fooBar = () => Promise.resolve(class FooBar {});
-      anyElements.define("foo-bar", fooBar);
-      expect(anyElements.get("foo-bar")).toBe(fooBar);
+      AnyElements.define("foo-bar", fooBar);
+      expect(AnyElements.get("foo-bar")).toBe(fooBar);
     });
   });
 
   describe("undefine method", () => {
     it("is a function", () => {
-      expect(typeof anyElements.undefine).toBe("function");
+      expect(typeof AnyElements.undefine).toBe("function");
     });
 
     it("does nothing when component is not defined", () => {
-      expect(anyElements.undefine("foo-bar")).toBe(undefined);
+      expect(AnyElements.undefine("foo-bar")).toBe(undefined);
     });
 
     it("undefines component with given name", () => {
-      anyElements.define("foo-bar", class FooBar {});
-      anyElements.undefine("foo-bar");
+      AnyElements.define("foo-bar", class FooBar {});
+      AnyElements.undefine("foo-bar");
 
       expect(() =>
-        anyElements.define("foo-bar", class FooBar {})
+        AnyElements.define("foo-bar", class FooBar {})
       ).not.toThrowError();
     });
   });
 
   describe("whenDefined method", () => {
     it("is a function", () => {
-      expect(typeof anyElements.whenDefined).toBe("function");
+      expect(typeof AnyElements.whenDefined).toBe("function");
     });
 
     it("returns a promise", () => {
-      expect(anyElements.whenDefined("foo-bar") instanceof Promise).toBe(true);
+      expect(AnyElements.whenDefined("foo-bar") instanceof Promise).toBe(true);
     });
 
     it("resolves returned promise when constructor was defined", async () => {
-      anyElements.define("foo-bar", class FooBar {});
-      const promise = anyElements.whenDefined("foo-bar");
+      AnyElements.define("foo-bar", class FooBar {});
+      const promise = AnyElements.whenDefined("foo-bar");
 
       await expectAsync(promise).toBeResolved();
     });
 
     it("resolves returned promise when constructor gets defined", async () => {
-      const promise = anyElements.whenDefined("foo-bar");
-      anyElements.define("foo-bar", class FooBar {});
+      const promise = AnyElements.whenDefined("foo-bar");
+      AnyElements.define("foo-bar", class FooBar {});
 
       await expectAsync(promise).toBeResolved();
     });
@@ -142,7 +142,7 @@ describe("anyElements", () => {
 
   describe("get method", () => {
     it("is a function", () => {
-      expect(typeof anyElements.get).toBe("function");
+      expect(typeof AnyElements.get).toBe("function");
     });
   });
 
@@ -155,7 +155,7 @@ describe("anyElements", () => {
         called = true;
       }
     }
-    anyElements.define("foo-bar", FooBar);
+    AnyElements.define("foo-bar", FooBar);
 
     await expectAsync(until(() => called))
       .withContext(
@@ -174,7 +174,7 @@ describe("anyElements", () => {
         called = true;
       }
     }
-    anyElements.define("foo-bar", FooBar, { selector: ".foo-bar" });
+    AnyElements.define("foo-bar", FooBar, { selector: ".foo-bar" });
 
     await expectAsync(until(() => called)).toBeResolved();
   });
@@ -190,7 +190,7 @@ describe("anyElements", () => {
         called++;
       }
     }
-    anyElements.define("foo-bar", FooBar);
+    AnyElements.define("foo-bar", FooBar);
 
     await expectAsync(until(() => called === 2)).toBeResolved();
   });
@@ -204,7 +204,7 @@ describe("anyElements", () => {
         constructed = true;
       }
     }
-    anyElements.define("foo-bar", FooBar);
+    AnyElements.define("foo-bar", FooBar);
 
     await until(() => constructed);
     expect(element.$any instanceof FooBar).toBe(true);
@@ -214,7 +214,7 @@ describe("anyElements", () => {
     const element = document.createElement("foo-bar");
     document.body.appendChild(element);
     let called = false;
-    anyElements.define(
+    AnyElements.define(
       "foo-bar",
       () =>
         Promise.resolve(
@@ -243,7 +243,7 @@ describe("anyElements", () => {
         disconnected = true;
       }
     }
-    anyElements.define("foo-bar", FooBar);
+    AnyElements.define("foo-bar", FooBar);
 
     await until(() => constructed);
     document.body.removeChild(element);
@@ -268,7 +268,7 @@ describe("anyElements", () => {
       }
     }
 
-    anyElements.define("foo-bar", FooBar);
+    AnyElements.define("foo-bar", FooBar);
 
     await until(() => constructed === 2);
     document.body.removeChild(parent);
@@ -293,7 +293,7 @@ describe("anyElements", () => {
         attributesChanged = { name, oldValue, newValue };
       }
     }
-    anyElements.define("foo-bar", FooBar);
+    AnyElements.define("foo-bar", FooBar);
 
     await until(() => constructed);
     element.setAttribute("baz", "foo-baz");
@@ -323,7 +323,7 @@ describe("anyElements", () => {
         attributesChanged = { name, oldValue, newValue };
       }
     }
-    anyElements.define("foo-bar", FooBar);
+    AnyElements.define("foo-bar", FooBar);
 
     await until(() => constructed);
     element.setAttribute("foo-bar", "foo-bar");

@@ -3,6 +3,8 @@ const propertyName = "$any";
 const registry = {};
 const promises = {};
 
+const rootNode = document.body;
+
 const forEach = Array.prototype.forEach;
 
 const callIfExists = callable => callable && callable();
@@ -60,13 +62,15 @@ const disconnect = (node: HTMLElement) => {
   delete node[propertyName];
 };
 
-const connectAll = (parent: HTMLElement) => {
+const connectAll = (parent: HTMLElement, onlyName?: string) => {
   // 1 is Node.ELEMENT_NODE
   if (parent.nodeType !== 1) {
     return;
   }
 
-  forEach.call(Object.keys(registry), (name: string) => {
+  const names = onlyName ? registry[onlyName] : Object.keys(registry);
+
+  forEach.call(names, (name: string) => {
     const element = registry[name];
     const selector = element._options._selector;
 
@@ -101,8 +105,6 @@ const disconnectAll = (parent: HTMLElement) => {
 
 export default class AnyElementRegistry {
   public constructor() {
-    const rootNode = document.body;
-
     new MutationObserver(mutationsList => {
       forEach.call(mutationsList, mutation => {
         forEach.call(mutation.removedNodes, disconnectAll);
@@ -134,6 +136,8 @@ export default class AnyElementRegistry {
         _selector: options.selector || name,
       },
     };
+
+    connectAll(rootNode, name);
 
     if (promises[name]) {
       promises[name].forEach(resolve => resolve());
