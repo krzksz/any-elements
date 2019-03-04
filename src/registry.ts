@@ -1,42 +1,29 @@
-import { HTMLAnyElement } from "./interface";
-
-type AnyElementFunction = () => HTMLAnyElement;
-type AnyElementPromise = () => Promise<HTMLAnyElement>;
+const propertyName = "$any";
 
 const registry = {};
 const promises = {};
-const callOptional = callable => callable && callable();
-const isFunction = variable => typeof variable === "function";
 
-const connect = (
-  element: HTMLAnyElement,
-  name: string,
-  constructor: HTMLAnyElement | AnyElementFunction | AnyElementPromise
-) => {
-  if (element.$any) {
+const forEach = Array.prototype.forEach;
+
+const callIfExists = callable => callable && callable();
+
+const connect = (node: HTMLElement, name: string, element: any) => {
+  if (node[propertyName]) {
     return;
   }
 
-  element.$any = { name, observer: null };
+  Promise.resolve(element()).then(Constructor => {
+    const instance = new Constructor(node);
+    instance.$element = node;
+    instance.$name = name;
+    node[propertyName] = instance;
 
-  const objectOrPromise: HTMLAnyElement | AnyElementPromise = isFunction(
-    constructor
-  )
-    ? (constructor as AnyElementFunction)()
-    : (constructor as HTMLAnyElement);
-
-  Promise.resolve(objectOrPromise).then(constructorObject => {
-    for (let key in constructorObject) {
-      const value = constructorObject[key];
-      element[key] = isFunction(value) ? value.bind(element) : value;
-    }
-
-    const attributeFilter = callOptional(element.observedAttributes);
+    const attributeFilter = callIfExists(instance.observedAttributes);
     if (attributeFilter) {
-      const observer = new MutationObserver(mutationsList => {
-        mutationsList.forEach(function(mutation) {
+      instance.$observer = new MutationObserver(mutationsList => {
+        forEach.call(mutationsList, mutation => {
           const attributeName = mutation.attributeName;
-          element.attributeChangedCallback(
+          instance.attributeChangedCallback(
             attributeName,
             mutation.oldValue,
             (mutation.target as HTMLElement).getAttribute(attributeName)
@@ -44,74 +31,72 @@ const connect = (
         });
       });
 
-      observer.observe(element as Node, {
+      instance.$observer.observe(node, {
         attributes: true,
         attributeOldValue: true,
         attributeFilter,
       });
-      element.$any.observer = observer;
     }
 
-    callOptional(element.connectedCallback);
+    callIfExists(instance.connectedCallback);
   });
 };
 
-const disconnect = element => {
-  if (!element.$any) {
+const disconnect = (node: HTMLElement) => {
+  const instance = node[propertyName];
+
+  if (!instance) {
     return;
   }
 
-  const observer = element.$any.observer;
+  const observer = instance.$observer;
   if (observer) {
     observer.disconnect();
   }
 
-  callOptional(element.disconnectedCallback);
+  callIfExists(instance.disconnectedCallback);
 
-  delete element.$any;
+  delete instance.$element;
+  delete node[propertyName];
 };
 
-const connectAll = parent => {
+const connectAll = (parent: HTMLElement) => {
   // 1 is Node.ELEMENT_NODE
   if (parent.nodeType !== 1) {
     return;
   }
 
-  for (let name in registry) {
-    const { _selector, _constructor } = registry[name];
+  forEach.call(Object.keys(registry), (name: string) => {
+    const element = registry[name];
+    const selector = element._options._selector;
 
-    if (parent.matches(_selector)) {
+    if (parent.matches(selector)) {
       connect(
         parent,
         name,
-        _constructor
+        element._constructor
       );
     }
 
-    const elements = parent.querySelectorAll(_selector);
-
-    for (let i = 0; i < elements.length; i++) {
+    forEach.call(parent.querySelectorAll(selector), (node: HTMLElement) =>
       connect(
-        elements[i],
+        node,
         name,
-        _constructor
-      );
-    }
-  }
+        element._constructor
+      )
+    );
+  });
 };
 
-const disconnectAll = parentNode => {
+const disconnectAll = (parent: HTMLElement) => {
   // 1 is Node.ELEMENT_NODE
-  if (parentNode.nodeType !== 1) {
+  if (parent.nodeType !== 1) {
     return;
   }
 
-  disconnect(parentNode);
+  disconnect(parent);
 
-  const elements = parentNode.querySelectorAll(`*`);
-  for (let i = 0; i < elements.length; i++) {
-    disconnect(elements[i]);
-  }
+  forEach.call(parent.querySelectorAll(`*`), disconnect);
 };
 
 export default class AnyElementRegistry {
@@ -119,16 +104,9 @@ export default class AnyElementRegistry {
     const rootNode = document.body;
 
     new MutationObserver(mutationsList => {
-      mutationsList.forEach(mutation => {
-        const disconnected = mutation.removedNodes;
-        for (let i = 0; i < disconnected.length; i++) {
-          disconnectAll(disconnected[i]);
-        }
-
-        const connected = mutation.addedNodes;
-        for (let i = 0; i < connected.length; i++) {
-          connectAll(connected[i]);
-        }
+      forEach.call(mutationsList, mutation => {
+        forEach.call(mutation.removedNodes, disconnectAll);
+        forEach.call(mutation.addedNodes, connectAll);
       });
     }).observe(rootNode, {
       childList: true,
@@ -140,8 +118,8 @@ export default class AnyElementRegistry {
 
   public define(
     name: string,
-    constructor: object,
-    options: { selector?: string } = {}
+    constructor: Function | PromiseLike<Function>,
+    options: { selector?: string; lazy?: boolean } = {}
   ): void {
     if (typeof name !== "string" || !name.match(/^[a-z][^A-Z]*\-[^A-Z]*$/)) {
       throw new DOMException(`"${name}" is not a valid element name`);
@@ -151,8 +129,10 @@ export default class AnyElementRegistry {
     }
 
     registry[name] = {
-      _constructor: constructor,
-      _selector: options.selector || name,
+      _constructor: !options.lazy ? () => constructor : constructor,
+      _options: {
+        _selector: options.selector || name,
+      },
     };
 
     if (promises[name]) {
@@ -164,10 +144,8 @@ export default class AnyElementRegistry {
     delete registry[name];
   }
 
-  public get(name: string): object | undefined {
-    const defined = registry[name] || {};
-
-    return defined._constructor;
+  public get(name: string): Function | PromiseLike<Function> {
+    return registry[name] ? registry[name]._constructor() : undefined;
   }
 
   public whenDefined(name: string): Promise<void> {

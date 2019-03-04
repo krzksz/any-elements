@@ -78,10 +78,22 @@ describe("anyElements", () => {
       expect(anyElements.get("foo-bar")).toBe(undefined);
     });
 
-    it("returns constructor object for defined component", () => {
-      const constructor = {};
-      anyElements.define("foo-bar", constructor);
-      expect(anyElements.get("foo-bar")).toBe(constructor);
+    it("returns constructor for component defined with constructor", () => {
+      class FooBar {}
+      anyElements.define("foo-bar", FooBar);
+      expect(anyElements.get("foo-bar")).toBe(FooBar);
+    });
+
+    it("returns function for component defined with function", () => {
+      const fooBar = () => class FooBar {};
+      anyElements.define("foo-bar", fooBar);
+      expect(anyElements.get("foo-bar")).toBe(fooBar);
+    });
+
+    it("returns promise for component defined with promise", () => {
+      const fooBar = () => Promise.resolve(class FooBar {});
+      anyElements.define("foo-bar", fooBar);
+      expect(anyElements.get("foo-bar")).toBe(fooBar);
     });
   });
 
@@ -95,10 +107,12 @@ describe("anyElements", () => {
     });
 
     it("undefines component with given name", () => {
-      anyElements.define("foo-bar", {});
+      anyElements.define("foo-bar", class FooBar {});
       anyElements.undefine("foo-bar");
 
-      expect(() => anyElements.define("foo-bar", {})).not.toThrowError();
+      expect(() =>
+        anyElements.define("foo-bar", class FooBar {})
+      ).not.toThrowError();
     });
   });
 
@@ -112,7 +126,7 @@ describe("anyElements", () => {
     });
 
     it("resolves returned promise when constructor was defined", async () => {
-      anyElements.define("foo-bar", {});
+      anyElements.define("foo-bar", class FooBar {});
       const promise = anyElements.whenDefined("foo-bar");
 
       await expectAsync(promise).toBeResolved();
@@ -120,7 +134,7 @@ describe("anyElements", () => {
 
     it("resolves returned promise when constructor gets defined", async () => {
       const promise = anyElements.whenDefined("foo-bar");
-      anyElements.define("foo-bar", {});
+      anyElements.define("foo-bar", class FooBar {});
 
       await expectAsync(promise).toBeResolved();
     });
@@ -133,223 +147,185 @@ describe("anyElements", () => {
   });
 
   it("calls connectedCallback when defined", async () => {
-    const element = document.createElement("div");
+    const element = document.createElement("foo-bar");
     document.body.appendChild(element);
-    let connected = false;
-    const constructor = {
+    let called = false;
+    class FooBar {
       connectedCallback() {
-        connected = true;
-      },
-    };
-    anyElements.define("foo-bar", constructor, { selector: "div" });
+        called = true;
+      }
+    }
+    anyElements.define("foo-bar", FooBar);
 
-    await expectAsync(until(() => connected))
+    await expectAsync(until(() => called))
       .withContext(
         "connectedCallback was not called for element matching the selector"
       )
       .toBeResolved();
   });
 
+  it("calls connectedCallback when defined with custom selector", async () => {
+    const element = document.createElement("div");
+    element.classList.add("foo-bar");
+    document.body.appendChild(element);
+    let called = false;
+    class FooBar {
+      connectedCallback() {
+        called = true;
+      }
+    }
+    anyElements.define("foo-bar", FooBar, { selector: ".foo-bar" });
+
+    await expectAsync(until(() => called)).toBeResolved();
+  });
+
   it("calls connectedCallback for nested components", async () => {
-    const parent = document.createElement("div");
-    const child = document.createElement("div");
+    const parent = document.createElement("foo-bar");
+    const child = document.createElement("foo-bar");
     parent.appendChild(child);
     document.body.appendChild(parent);
-    let connectedCalls = 0;
-    const constructor = {
+    let called = 0;
+    class FooBar {
       connectedCallback() {
-        connectedCalls++;
-      },
-    };
-    anyElements.define("foo-bar", constructor, { selector: "div" });
+        called++;
+      }
+    }
+    anyElements.define("foo-bar", FooBar);
 
-    await expectAsync(until(() => connectedCalls === 2))
-      .withContext("connectedCallback was not called for both components")
-      .toBeResolved();
+    await expectAsync(until(() => called === 2)).toBeResolved();
   });
 
-  it("extends existing object with new properties", async () => {
-    const element = document.createElement("div");
+  it("adds $any property to the element pointing to component instance", async () => {
+    const element = document.createElement("foo-bar");
     document.body.appendChild(element);
-    let connected = false;
-    const constructor = {
-      connectedCallback() {
-        connected = true;
-      },
-      fooBar: "foo-bar",
-    };
-    anyElements.define("foo-bar", constructor, { selector: "div" });
+    let constructed = false;
+    class FooBar {
+      constructor() {
+        constructed = true;
+      }
+    }
+    anyElements.define("foo-bar", FooBar);
 
-    await until(() => connected);
-    expect(element.fooBar).toBe(constructor.fooBar);
-  });
-
-  it("provided constructor parameter can be a function returning an object", async () => {
-    const element = document.createElement("div");
-    document.body.appendChild(element);
-    let connected = false;
-    const constructor = () => {
-      return {
-        connectedCallback() {
-          connected = true;
-        },
-      };
-    };
-    anyElements.define("foo-bar", constructor, { selector: "div" });
-
-    await until(() => connected);
+    await until(() => constructed);
+    expect(element.$any instanceof FooBar).toBe(true);
   });
 
   it("provided constructor parameter can be a function returning a promise", async () => {
-    const element = document.createElement("div");
+    const element = document.createElement("foo-bar");
     document.body.appendChild(element);
-    let connected = false;
-    const constructor = () =>
-      Promise.resolve({
-        connectedCallback() {
-          connected = true;
-        },
-      });
-    anyElements.define("foo-bar", constructor, { selector: "div" });
+    let called = false;
+    anyElements.define(
+      "foo-bar",
+      () =>
+        Promise.resolve(
+          class FooBar {
+            constructor() {
+              called = true;
+            }
+          }
+        ),
+      { lazy: true }
+    );
 
-    await until(() => connected);
-  });
-
-  it("extends existing object with new methods", async () => {
-    const element = document.createElement("div");
-    document.body.appendChild(element);
-    let connected = false;
-    const constructor = {
-      connectedCallback() {
-        connected = true;
-      },
-      fooBar() {},
-    };
-    anyElements.define("foo-bar", constructor, { selector: "div" });
-
-    await until(() => connected);
-    expect(typeof element.fooBar).toBe("function");
-  });
-
-  it("automatically binds new methods to element object", async () => {
-    const element = document.createElement("div");
-    document.body.appendChild(element);
-    let connected = false;
-    const constructor = {
-      connectedCallback() {
-        connected = true;
-      },
-      fooBar() {
-        return this;
-      },
-    };
-    anyElements.define("foo-bar", constructor, { selector: "div" });
-
-    await until(() => connected);
-    expect(element.fooBar()).toBe(element);
+    await until(() => called);
   });
 
   it("calls disconnectedCallback when defined", async () => {
-    const element = document.createElement("div");
+    const element = document.createElement("foo-bar");
     document.body.appendChild(element);
-    let connected = false;
+    let constructed = false;
     let disconnected = false;
-    const constructor = {
-      connectedCallback() {
-        connected = true;
-      },
+    class FooBar {
+      constructor() {
+        constructed = true;
+      }
       disconnectedCallback() {
         disconnected = true;
-      },
-    };
-    anyElements.define("foo-bar", constructor, { selector: "div" });
+      }
+    }
+    anyElements.define("foo-bar", FooBar);
 
-    await until(() => connected);
+    await until(() => constructed);
     document.body.removeChild(element);
-    await expectAsync(until(() => disconnected))
-      .withContext(
-        "disconnectedCallback was not called after element was removed"
-      )
-      .toBeResolved();
+    await expectAsync(until(() => disconnected)).toBeResolved();
   });
 
   it("calls disconnectedCallback for nested components", async () => {
-    const parent = document.createElement("div");
-    const child = document.createElement("div");
+    const parent = document.createElement("foo-bar");
+    const child = document.createElement("foo-bar");
     parent.appendChild(child);
     document.body.appendChild(parent);
-    let connectedCount = 0;
-    let disconnectedCount = 0;
-    const constructor = {
-      connectedCallback() {
-        connectedCount++;
-      },
-      disconnectedCallback() {
-        disconnectedCount++;
-      },
-    };
-    anyElements.define("foo-bar", constructor, { selector: "div" });
 
-    await until(() => connectedCount === 2);
+    let constructed = 0;
+    let disconnected = 0;
+
+    class FooBar {
+      constructor() {
+        constructed++;
+      }
+      disconnectedCallback() {
+        disconnected++;
+      }
+    }
+
+    anyElements.define("foo-bar", FooBar);
+
+    await until(() => constructed === 2);
     document.body.removeChild(parent);
-    await expectAsync(until(() => disconnectedCount === 2))
-      .withContext(
-        "disconnectedCallback was not called twice after parent was removed"
-      )
-      .toBeResolved();
+    await expectAsync(until(() => disconnected === 2)).toBeResolved();
   });
 
   it("calls attributeChangedCallback when observedAttributes is defined", async () => {
-    const element = document.createElement("div");
+    const element = document.createElement("foo-bar");
     document.body.appendChild(element);
-    let connected = false;
-    let attributesChanged = false;
-    const constructor = {
-      connectedCallback() {
-        connected = true;
-      },
-      observedAttributes() {
-        return ["foo-bar"];
-      },
-      attributeChangedCallback: (name, oldValue, newValue) => {
-        attributesChanged = { name, oldValue, newValue };
-      },
-    };
-    anyElements.define("foo-bar", constructor, { selector: "div" });
 
-    await until(() => connected);
-    element.setAttribute("foo-bar", "foo-baz");
+    let constructed = false;
+    let attributesChanged = false;
+
+    class FooBar {
+      connectedCallback() {
+        constructed = true;
+      }
+      observedAttributes() {
+        return ["baz"];
+      }
+      attributeChangedCallback(name, oldValue, newValue) {
+        attributesChanged = { name, oldValue, newValue };
+      }
+    }
+    anyElements.define("foo-bar", FooBar);
+
+    await until(() => constructed);
+    element.setAttribute("baz", "foo-baz");
     await expectAsync(
       until(() => {
         return (
-          attributesChanged.name === "foo-bar" &&
+          attributesChanged.name === "baz" &&
           attributesChanged.oldValue === null &&
           attributesChanged.newValue === "foo-baz"
         );
       })
-    )
-      .withContext(
-        "attributeChangedCallback was not called after attributes change"
-      )
-      .toBeResolved();
+    ).toBeResolved();
   });
 
   it("doesn't call attributeChangedCallback when observedAttributes is not defined", async done => {
-    const element = document.createElement("div");
-    document.body.appendChild(element);
-    let connected = false;
-    let attributesChanged = false;
-    const constructor = {
-      connectedCallback() {
-        connected = true;
-      },
-      attributeChangedCallback() {
-        attributesChanged = true;
-      },
-    };
-    anyElements.define("foo-bar", constructor, { selector: "div" });
+    const element = document.createElement("foo-bar");
 
-    await until(() => connected);
+    document.body.appendChild(element);
+    let constructed = false;
+    let attributesChanged = false;
+
+    class FooBar {
+      connectedCallback() {
+        constructed = true;
+      }
+      attributeChangedCallback(name, oldValue, newValue) {
+        attributesChanged = { name, oldValue, newValue };
+      }
+    }
+    anyElements.define("foo-bar", FooBar);
+
+    await until(() => constructed);
     element.setAttribute("foo-bar", "foo-bar");
     setTimeout(() => {
       expect(attributesChanged).toBe(false);
