@@ -5,7 +5,6 @@
   "main": "dist/anyElements.js",
   "author": "Mateusz Krzeszowiak <mateusz.krzeszowiak@gmail.com",
   "license": "MIT",
-  "private": true,
   "umd:main": "dist/anyElements.umd.js",
   "module": "dist/anyElements.mjs",
   "source": "src/anyElements.ts",
