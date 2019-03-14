@@ -13,6 +13,8 @@ const connect = (node: HTMLElement, name: string, element: any) => {
   if (node[propertyName]) {
     return;
   }
+  // Prevent any other synchronous methods to enter.
+  node[propertyName] = name;
 
   Promise.resolve(element()).then(Constructor => {
     const instance = new Constructor(node);
@@ -68,7 +70,7 @@ const connectAll = (parent: HTMLElement, onlyName?: string) => {
     return;
   }
 
-  const names = onlyName ? registry[onlyName] : Object.keys(registry);
+  const names = Object.keys(registry);
 
   forEach.call(names, (name: string) => {
     const element = registry[name];
