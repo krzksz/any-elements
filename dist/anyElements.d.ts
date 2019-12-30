@@ -1,3 +1,4 @@
-import AnyElementRegistry from "./registry";
-declare const _default: AnyElementRegistry;
-export default _default;
+import AnyElementsRegistry from "./registry";
+import Component from "./component";
+declare const Registry: AnyElementsRegistry;
+export { Component, Registry };

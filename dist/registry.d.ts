@@ -1,10 +1,28 @@
-export default class AnyElementRegistry {
+import Component from "./component";
+export default class AnyElementsRegistry {
     constructor();
-    define(name: string, constructor: Function | PromiseLike<Function>, options?: {
+    /**
+     * Registers component with a given name and options.
+     * @param name Name of the component.
+     * @param constructor Constructor or a function that returns a promise resolving with a constructor.
+     * @param options Component's options.
+     */
+    define(name: string, constructor: Component | PromiseLike<Component>, options?: {
         selector?: string;
-        lazy?: boolean;
     }): void;
+    /**
+     * Removes component with a given name from the registry.
+     * @param name Component's name.
+     */
     undefine(name: string): void;
-    get(name: string): Function | PromiseLike<Function>;
+    /**
+     * Returns component's constructor or a function that returns a promise resolving to it for a given name.
+     * @param name Component's name.
+     */
+    get(name: string): Component | PromiseLike<Component>;
+    /**
+     * Returns a promise that is going to be resolved when the component with given name gets defined.
+     * @param name Component's name.
+     */
     whenDefined(name: string): Promise<void>;
 }

@@ -1,5 +1,3 @@
-/* global expectAsync */
-
 const until = condition => {
   const check = (condition, resolve) => {
     if (!condition()) {
@@ -12,6 +10,8 @@ const until = condition => {
 };
 
 const AnyElements = window.AnyElements;
+const Registry = AnyElements.Registry;
+const Component = AnyElements.Component;
 
 if (!Element.prototype.matches) {
   Element.prototype.matches =
@@ -20,316 +20,495 @@ if (!Element.prototype.matches) {
 }
 
 describe("AnyElements", () => {
-  afterEach(() => {
-    if (AnyElements.get("foo-bar")) {
-      AnyElements.undefine("foo-bar");
-    }
-    document.body.innerHTML = "";
-  });
-
-  it("is an object", () => {
-    expect(typeof AnyElements).toBe("object");
-  });
-
-  describe("define method", () => {
-    it("is a function", () => {
-      expect(typeof AnyElements.define).toBe("function");
-    });
-
-    it("throws when name is not provided", () => {
-      expect(() => AnyElements.define()).toThrow();
-    });
-
-    it("throws when name contains uppercase letters", () => {
-      expect(() => AnyElements.define("fOo-bAr")).toThrow();
-    });
-
-    it("throws when name doesn't start with a letter", () => {
-      expect(() => AnyElements.define("-foo-bar")).toThrow();
-    });
-
-    it("throws when name doesn't contain a hyphen", () => {
-      expect(() => AnyElements.define("foobar")).toThrow();
-    });
-
-    it("throws DOMException when component is already defined", () => {
-      AnyElements.define("foo-bar", {});
-
-      expect(() => AnyElements.define("foo-bar", {})).toThrow();
-    });
-
-    it("resolves promises from whenDefined", async () => {
-      const promise = Promise.all([
-        AnyElements.whenDefined("foo-bar"),
-        AnyElements.whenDefined("foo-bar"),
-      ]);
-      AnyElements.define("foo-bar", {});
-
-      await expectAsync(promise).toBeResolved();
-    });
-  });
-
-  describe("get method", () => {
-    it("is a function", () => {
-      expect(typeof AnyElements.get).toBe("function");
-    });
-
-    it("returns undefined for undefined component", () => {
-      expect(AnyElements.get("foo-bar")).toBe(undefined);
-    });
-
-    it("returns constructor for component defined with constructor", () => {
-      class FooBar {}
-      AnyElements.define("foo-bar", FooBar);
-      expect(AnyElements.get("foo-bar")).toBe(FooBar);
-    });
-
-    it("returns function for component defined with function", () => {
-      const fooBar = () => class FooBar {};
-      AnyElements.define("foo-bar", fooBar);
-      expect(AnyElements.get("foo-bar")).toBe(fooBar);
-    });
-
-    it("returns promise for component defined with promise", () => {
-      const fooBar = () => Promise.resolve(class FooBar {});
-      AnyElements.define("foo-bar", fooBar);
-      expect(AnyElements.get("foo-bar")).toBe(fooBar);
-    });
-  });
-
-  describe("undefine method", () => {
-    it("is a function", () => {
-      expect(typeof AnyElements.undefine).toBe("function");
-    });
-
-    it("does nothing when component is not defined", () => {
-      expect(AnyElements.undefine("foo-bar")).toBe(undefined);
-    });
-
-    it("undefines component with given name", () => {
-      AnyElements.define("foo-bar", class FooBar {});
-      AnyElements.undefine("foo-bar");
-
-      expect(() =>
-        AnyElements.define("foo-bar", class FooBar {})
-      ).not.toThrowError();
-    });
-  });
-
-  describe("whenDefined method", () => {
-    it("is a function", () => {
-      expect(typeof AnyElements.whenDefined).toBe("function");
-    });
-
-    it("returns a promise", () => {
-      expect(AnyElements.whenDefined("foo-bar") instanceof Promise).toBe(true);
-    });
-
-    it("resolves returned promise when constructor was defined", async () => {
-      AnyElements.define("foo-bar", class FooBar {});
-      const promise = AnyElements.whenDefined("foo-bar");
-
-      await expectAsync(promise).toBeResolved();
-    });
-
-    it("resolves returned promise when constructor gets defined", async () => {
-      const promise = AnyElements.whenDefined("foo-bar");
-      AnyElements.define("foo-bar", class FooBar {});
-
-      await expectAsync(promise).toBeResolved();
-    });
-  });
-
-  describe("get method", () => {
-    it("is a function", () => {
-      expect(typeof AnyElements.get).toBe("function");
-    });
-  });
-
-  it("calls connectedCallback when defined", async () => {
-    const element = document.createElement("foo-bar");
-    document.body.appendChild(element);
-    let called = false;
-    class FooBar {
-      connectedCallback() {
-        called = true;
+  describe("registry", () => {
+    afterEach(() => {
+      if (Registry.get("foo-bar")) {
+        Registry.undefine("foo-bar");
       }
-    }
-    AnyElements.define("foo-bar", FooBar);
+      document.body.innerHTML = "";
+    });
 
-    await expectAsync(until(() => called))
-      .withContext(
-        "connectedCallback was not called for element matching the selector"
-      )
-      .toBeResolved();
-  });
+    it("is an object", () => {
+      expect(typeof Registry).toBe("object");
+    });
 
-  it("calls connectedCallback when defined with custom selector", async () => {
-    const element = document.createElement("div");
-    element.classList.add("foo-bar");
-    document.body.appendChild(element);
-    let called = false;
-    class FooBar {
-      connectedCallback() {
-        called = true;
+    describe("define method", () => {
+      it("is a function", () => {
+        expect(typeof Registry.define).toBe("function");
+      });
+
+      it("throws when name is not provided", () => {
+        expect(() => Registry.define()).toThrow();
+      });
+
+      it("throws when name contains uppercase letters", () => {
+        expect(() => Registry.define("fOo-bAr")).toThrow();
+      });
+
+      it("throws when name doesn't start with a letter", () => {
+        expect(() => Registry.define("-foo-bar")).toThrow();
+      });
+
+      it("throws when name doesn't contain a hyphen", () => {
+        expect(() => Registry.define("foobar")).toThrow();
+      });
+
+      it("resolves promises from whenDefined", async () => {
+        const promise = Promise.all([
+          Registry.whenDefined("foo-bar"),
+          Registry.whenDefined("foo-bar"),
+        ]);
+        Registry.define("foo-bar", {});
+
+        await expectAsync(promise).toBeResolved();
+      });
+    });
+
+    describe("get method", () => {
+      it("is a function", () => {
+        expect(typeof Registry.get).toBe("function");
+      });
+
+      it("returns undefined for undefined component", () => {
+        expect(Registry.get("foo-bar")).toBe(undefined);
+      });
+
+      it("returns constructor for component defined with constructor", () => {
+        class FooBar extends Component {}
+        Registry.define("foo-bar", FooBar);
+        expect(Registry.get("foo-bar")).toBe(FooBar);
+      });
+
+      it("returns function for component defined with function", () => {
+        const fooBar = () => class FooBar extends Component {};
+        Registry.define("foo-bar", fooBar);
+        expect(Registry.get("foo-bar")).toBe(fooBar);
+      });
+
+      it("returns promise for component defined with promise", () => {
+        const fooBar = () => Promise.resolve(class FooBar extends Component {});
+        Registry.define("foo-bar", fooBar);
+        expect(Registry.get("foo-bar")).toBe(fooBar);
+      });
+    });
+
+    describe("undefine method", () => {
+      it("is a function", () => {
+        expect(typeof Registry.undefine).toBe("function");
+      });
+
+      it("does nothing when component is not defined", () => {
+        expect(Registry.undefine("foo-bar")).toBe(undefined);
+      });
+
+      it("undefines component with given name", () => {
+        Registry.define("foo-bar", class FooBar extends Component {});
+        Registry.undefine("foo-bar");
+
+        expect(() =>
+          Registry.define("foo-bar", class FooBar extends Component {})
+        ).not.toThrowError();
+      });
+    });
+
+    describe("whenDefined method", () => {
+      it("is a function", () => {
+        expect(typeof Registry.whenDefined).toBe("function");
+      });
+
+      it("returns a promise", () => {
+        expect(Registry.whenDefined("foo-bar") instanceof Promise).toBe(true);
+      });
+
+      it("resolves returned promise when constructor was defined", async () => {
+        Registry.define("foo-bar", class FooBar extends Component {});
+        const promise = Registry.whenDefined("foo-bar");
+
+        await expectAsync(promise).toBeResolved();
+      });
+
+      it("resolves returned promise when constructor gets defined", async () => {
+        const promise = Registry.whenDefined("foo-bar");
+        Registry.define("foo-bar", class FooBar extends Component {});
+
+        await expectAsync(promise).toBeResolved();
+      });
+    });
+
+    describe("get method", () => {
+      it("is a function", () => {
+        expect(typeof Registry.get).toBe("function");
+      });
+    });
+
+    it("calls connected when defined", async () => {
+      const element = document.createElement("foo-bar");
+      document.body.appendChild(element);
+      let connected = false;
+      class FooBar extends Component {
+        connected() {
+          connected = true;
+        }
       }
-    }
-    AnyElements.define("foo-bar", FooBar, { selector: ".foo-bar" });
+      Registry.define("foo-bar", FooBar);
 
-    await expectAsync(until(() => called)).toBeResolved();
-  });
+      await expectAsync(until(() => connected))
+        .withContext(
+          "connected was not called for element matching the selector"
+        )
+        .toBeResolved();
+    });
 
-  it("calls connectedCallback for nested components", async () => {
-    const parent = document.createElement("foo-bar");
-    const child = document.createElement("foo-bar");
-    parent.appendChild(child);
-    document.body.appendChild(parent);
-    let called = 0;
-    class FooBar {
-      connectedCallback() {
-        called++;
+    it("passes options to a component", async () => {
+      const element = document.createElement("foo-bar");
+      document.body.appendChild(element);
+      let options = { selector: "foo-bar" };
+      let passsedOptions = null;
+      class FooBar extends Component {
+        constructor({ node, name, options }) {
+          super({ node, name, options });
+          passsedOptions = this.options;
+        }
       }
-    }
-    AnyElements.define("foo-bar", FooBar);
+      Registry.define("foo-bar", FooBar, options);
 
-    await expectAsync(until(() => called === 2)).toBeResolved();
-  });
+      await expectAsync(until(() => passsedOptions)).toBeResolved();
+      expect(options).toEqual(passsedOptions);
+    });
 
-  it("adds $any property to the element pointing to component instance", async () => {
-    const element = document.createElement("foo-bar");
-    document.body.appendChild(element);
-    let constructed = false;
-    class FooBar {
-      constructor() {
-        constructed = true;
+    it("extends default options with passed ones", async () => {
+      const element = document.createElement("foo-bar");
+      document.body.appendChild(element);
+      let options = { default: false };
+      class FooBar extends Component {
+        get options() {
+          return { default: true };
+        }
+
+        constructor(node, name, options) {
+          super(node, name, options);
+          options = this.options;
+        }
       }
-    }
-    AnyElements.define("foo-bar", FooBar);
+      Registry.define("foo-bar", FooBar, options);
 
-    await until(() => constructed);
-    expect(element.$any instanceof FooBar).toBe(true);
-  });
+      await expectAsync(until(() => options)).toBeResolved();
+      expect(options.default).toBe(false);
+    });
 
-  it("provided constructor parameter can be a function returning a promise", async () => {
-    const element = document.createElement("foo-bar");
-    document.body.appendChild(element);
-    let called = false;
-    AnyElements.define(
-      "foo-bar",
-      () =>
+    it("calls connected when defined with custom selector", async () => {
+      const element = document.createElement("div");
+      element.classList.add("foo-bar");
+      document.body.appendChild(element);
+      let connected = false;
+      class FooBar extends Component {
+        connected() {
+          connected = true;
+        }
+      }
+      Registry.define("foo-bar", FooBar, { selector: ".foo-bar" });
+
+      await expectAsync(until(() => connected)).toBeResolved();
+    });
+
+    it("calls connected for nested components", async () => {
+      const parent = document.createElement("foo-bar");
+      const child = document.createElement("foo-bar");
+      parent.appendChild(child);
+      document.body.appendChild(parent);
+      let called = 0;
+      class FooBar extends Component {
+        connected() {
+          called++;
+        }
+      }
+      Registry.define("foo-bar", FooBar);
+
+      await expectAsync(until(() => called === 2)).toBeResolved();
+    });
+
+    it("adds $any property to the element pointing to component instance", async () => {
+      const element = document.createElement("foo-bar");
+      document.body.appendChild(element);
+      let connected = false;
+      class FooBar extends Component {
+        connected() {
+          connected = true;
+        }
+      }
+      Registry.define("foo-bar", FooBar);
+
+      await until(() => connected);
+      expect(element.$any instanceof FooBar).toBe(true);
+    });
+
+    it("provided constructor parameter can be a function returning a promise", async () => {
+      const element = document.createElement("foo-bar");
+      document.body.appendChild(element);
+      let connected = false;
+      Registry.define("foo-bar", () =>
         Promise.resolve(
-          class FooBar {
-            constructor() {
-              called = true;
+          class FooBar extends Component {
+            connected() {
+              connected = true;
             }
           }
-        ),
-      { lazy: true }
-    );
+        )
+      );
 
-    await until(() => called);
+      await until(() => connected);
+    });
+
+    it("calls disconnected when defined", async () => {
+      const element = document.createElement("foo-bar");
+      document.body.appendChild(element);
+      let connected = false;
+      let disconnected = false;
+      class FooBar extends Component {
+        connected() {
+          connected = true;
+        }
+        disconnected() {
+          disconnected = true;
+        }
+      }
+      Registry.define("foo-bar", FooBar);
+
+      await until(() => connected);
+      document.body.removeChild(element);
+      await expectAsync(until(() => disconnected)).toBeResolved();
+    });
+
+    it("calls disconnected for nested components", async () => {
+      const parent = document.createElement("foo-bar");
+      const child = document.createElement("foo-bar");
+      parent.appendChild(child);
+      document.body.appendChild(parent);
+
+      let connected = 0;
+      let disconnected = 0;
+
+      class FooBar extends Component {
+        connected() {
+          connected++;
+        }
+        disconnected() {
+          disconnected++;
+        }
+      }
+
+      Registry.define("foo-bar", FooBar);
+
+      await until(() => connected === 2);
+      document.body.removeChild(parent);
+      await expectAsync(until(() => disconnected === 2)).toBeResolved();
+    });
+
+    it("calls attributeChanged when observedAttributes is defined", async () => {
+      const element = document.createElement("foo-bar");
+      document.body.appendChild(element);
+
+      let connected = false;
+      let attributeChanged = false;
+
+      class FooBar extends Component {
+        connected() {
+          connected = true;
+        }
+        observedAttributes() {
+          return ["baz"];
+        }
+        attributeChanged(name, oldValue, newValue) {
+          attributeChanged = { name, oldValue, newValue };
+        }
+      }
+      Registry.define("foo-bar", FooBar);
+
+      await until(() => connected);
+      element.setAttribute("baz", "foo-baz");
+      await expectAsync(
+        until(() => {
+          return (
+            attributeChanged.name === "baz" &&
+            attributeChanged.oldValue === null &&
+            attributeChanged.newValue === "foo-baz"
+          );
+        })
+      ).toBeResolved();
+    });
+
+    it("doesn't call attributeChanged when observedAttributes is not defined", async done => {
+      const element = document.createElement("foo-bar");
+
+      document.body.appendChild(element);
+      let connected = false;
+      let attributeChanged = false;
+
+      class FooBar extends Component {
+        connected() {
+          connected = true;
+        }
+        attributeChanged(name, oldValue, newValue) {
+          attributeChanged = { name, oldValue, newValue };
+        }
+      }
+      Registry.define("foo-bar", FooBar);
+
+      await until(() => connected);
+      element.setAttribute("foo-bar", "foo-bar");
+      setTimeout(() => {
+        expect(attributeChanged).toBe(false);
+        done();
+      }, 100);
+    });
   });
 
-  it("calls disconnectedCallback when defined", async () => {
-    const element = document.createElement("foo-bar");
-    document.body.appendChild(element);
-    let constructed = false;
-    let disconnected = false;
-    class FooBar {
-      constructor() {
-        constructed = true;
-      }
-      disconnectedCallback() {
-        disconnected = true;
-      }
-    }
-    AnyElements.define("foo-bar", FooBar);
+  describe("component", () => {
+    it("is a function", () => {
+      expect(typeof Component).toBe("function");
+    });
 
-    await until(() => constructed);
-    document.body.removeChild(element);
-    await expectAsync(until(() => disconnected)).toBeResolved();
-  });
+    it("can be constructed", () => {
+      const node = document.createElement("div");
+      const name = "foo-bar";
+      expect(() => new Component({ node, name })).not.toThrowError();
+    });
 
-  it("calls disconnectedCallback for nested components", async () => {
-    const parent = document.createElement("foo-bar");
-    const child = document.createElement("foo-bar");
-    parent.appendChild(child);
-    document.body.appendChild(parent);
+    it("implements observedAttributes method", () => {
+      expect(typeof Component.prototype.observedAttributes).toBe("function");
+    });
 
-    let constructed = 0;
-    let disconnected = 0;
+    it("observedAttributes method returns an empty value by default", () => {
+      const node = document.createElement("div");
+      const name = "foo-bar";
+      const component = new Component({ node, name });
+      expect(component.observedAttributes()).toEqual(undefined);
+    });
 
-    class FooBar {
-      constructor() {
-        constructed++;
-      }
-      disconnectedCallback() {
-        disconnected++;
-      }
-    }
+    it("implements connected method", () => {
+      expect(typeof Component.prototype.connected).toBe("function");
+    });
 
-    AnyElements.define("foo-bar", FooBar);
+    it("implements disconnected method", () => {
+      expect(typeof Component.prototype.disconnected).toBe("function");
+    });
 
-    await until(() => constructed === 2);
-    document.body.removeChild(parent);
-    await expectAsync(until(() => disconnected === 2)).toBeResolved();
-  });
+    describe("attachEvent method", () => {
+      it("is defined", () => {
+        expect(typeof Component.prototype.attachEvent).toBe("function");
+      });
 
-  it("calls attributeChangedCallback when observedAttributes is defined", async () => {
-    const element = document.createElement("foo-bar");
-    document.body.appendChild(element);
+      it("attaches event to component's node", () => {
+        const node = document.createElement("div");
+        const name = "foo-bar";
+        const component = new Component({ node, name });
+        const eventName = "event";
+        const listener = jasmine.createSpy(eventName);
+        const event = new Event(eventName);
 
-    let constructed = false;
-    let attributesChanged = false;
+        component.attachEvent(eventName, listener);
+        node.dispatchEvent(event);
 
-    class FooBar {
-      connectedCallback() {
-        constructed = true;
-      }
-      observedAttributes() {
-        return ["baz"];
-      }
-      attributeChangedCallback(name, oldValue, newValue) {
-        attributesChanged = { name, oldValue, newValue };
-      }
-    }
-    AnyElements.define("foo-bar", FooBar);
+        expect(listener).toHaveBeenCalled();
+      });
 
-    await until(() => constructed);
-    element.setAttribute("baz", "foo-baz");
-    await expectAsync(
-      until(() => {
-        return (
-          attributesChanged.name === "baz" &&
-          attributesChanged.oldValue === null &&
-          attributesChanged.newValue === "foo-baz"
+      it("calls event to with component's node as a target", () => {
+        const node = document.createElement("div");
+        const name = "foo-bar";
+        const component = new Component({ node, name });
+        const eventName = "event";
+        const event = new Event(eventName);
+
+        component.attachEvent(eventName, event =>
+          expect(event.target).toBe(node)
         );
-      })
-    ).toBeResolved();
-  });
+        node.dispatchEvent(event);
+      });
 
-  it("doesn't call attributeChangedCallback when observedAttributes is not defined", async done => {
-    const element = document.createElement("foo-bar");
+      it("passes options to event listener for component", done => {
+        const parent = document.createElement("div");
+        const node = document.createElement("p");
+        node.appendChild(parent);
 
-    document.body.appendChild(element);
-    let constructed = false;
-    let attributesChanged = false;
+        const name = "foo-bar";
+        const component = new Component({ node, name });
+        const eventName = "event";
+        const parentListener = jasmine.createSpy("parent");
+        const nodeListener = jasmine.createSpy("node");
+        const event = new Event(eventName);
 
-    class FooBar {
-      connectedCallback() {
-        constructed = true;
-      }
-      attributeChangedCallback(name, oldValue, newValue) {
-        attributesChanged = { name, oldValue, newValue };
-      }
-    }
-    AnyElements.define("foo-bar", FooBar);
+        parent.addEventListener(event, parentListener, { capture: true });
 
-    await until(() => constructed);
-    element.setAttribute("foo-bar", "foo-bar");
-    setTimeout(() => {
-      expect(attributesChanged).toBe(false);
-      done();
-    }, 100);
+        component.attachEvent(eventName, nodeListener, { capture: true });
+        node.dispatchEvent(event);
+
+        setTimeout(() => {
+          expect(nodeListener).toHaveBeenCalled();
+          expect(parentListener).not.toHaveBeenCalled();
+          done();
+        });
+      });
+
+      it("attaches event to delegate's node", () => {
+        const node = document.createElement("div");
+        const delegate = document.createElement("p");
+        node.appendChild(delegate);
+
+        const name = "foo-bar";
+        const component = new Component({ node, name });
+        const eventName = "event";
+        const listener = jasmine.createSpy(eventName);
+        const event = new Event(eventName);
+
+        component.attachEvent(eventName, delegate, listener);
+        delegate.dispatchEvent(event);
+
+        expect(listener).toHaveBeenCalled();
+      });
+
+      it("calls event to with delegate's node as a target", () => {
+        const node = document.createElement("div");
+        const delegate = document.createElement("p");
+        node.appendChild(delegate);
+
+        const name = "foo-bar";
+        const component = new Component({ node, name });
+        const eventName = "event";
+        const event = new Event(eventName);
+
+        component.attachEvent(eventName, delegate, ({ target }) =>
+          expect(target).toBe(delegate)
+        );
+        delegate.dispatchEvent(event);
+      });
+
+      it("passes options to event listener for component's delegate", done => {
+        const node = document.createElement("div");
+        const delegate = document.createElement("p");
+        node.appendChild(delegate);
+
+        const name = "foo-bar";
+        const component = new Component({ node, name });
+        const eventName = "event";
+        const nodeListener = jasmine.createSpy("node");
+        const delegateListener = jasmine.createSpy("delegate");
+        const event = new Event(eventName);
+
+        parent.addEventListener(event, nodeListener, {
+          capture: true,
+        });
+
+        component.attachEvent(eventName, delegate, delegateListener, {
+          capture: true,
+        });
+        delegate.dispatchEvent(event);
+
+        setTimeout(() => {
+          expect(delegateListener).toHaveBeenCalled();
+          expect(nodeListener).not.toHaveBeenCalled();
+          done();
+        });
+      });
+    });
   });
 });

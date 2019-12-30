@@ -1,3 +1,6 @@
-import AnyElementRegistry from "./registry";
+import AnyElementsRegistry from "./registry";
+import Component from "./component";
 
-export default new AnyElementRegistry();
+const Registry = new AnyElementsRegistry();
+
+export { Component, Registry };

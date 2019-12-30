@@ -1,109 +1,141 @@
-const propertyName = "$any";
+import { PROPERTY_NAME } from "./constants";
+import Component from "./component";
 
-const registry = {};
+interface ComponentRegistry {
+  [componentName: string]: {
+    _constructor: Component | PromiseLike<Component>;
+    _options: {
+      selector: string;
+    };
+  };
+}
+
+const registry: ComponentRegistry = {};
 const promises = {};
 
 const rootNode = document.body;
 
 const forEach = Array.prototype.forEach;
 
-const callIfExists = callable => callable && callable();
-
-const connect = (node: HTMLElement, name: string, element: any) => {
-  if (node[propertyName]) {
+/**
+ * Connects given DOM node with provided component.
+ * @param node DOM node that should be tied with the component.
+ * @param name Name of the component.
+ * @param options Options object for the component.
+ * @param constructor Component class or a function returning a promise that resolves to it.
+ */
+const connect = (
+  node: Element,
+  name: string,
+  options: {},
+  constructor: any
+) => {
+  if (node[PROPERTY_NAME]) {
     return;
   }
+  // If component was not provided, it means that this is a function.
+  if (!(constructor.prototype instanceof Component)) {
+    constructor = constructor();
+  }
 
-  Promise.resolve(element()).then(Constructor => {
-    const instance = new Constructor(node);
-    instance.$element = node;
-    instance.$name = name;
-    node[propertyName] = instance;
+  Promise.resolve(constructor).then(Constructor => {
+    const instance = new Constructor({ node, name, options });
 
-    const attributeFilter = callIfExists(instance.observedAttributes);
+    const attributeFilter = instance.observedAttributes();
     if (attributeFilter) {
-      instance.$observer = new MutationObserver(mutationsList => {
-        forEach.call(mutationsList, mutation => {
-          const attributeName = mutation.attributeName;
-          instance.attributeChangedCallback(
+      const observer = new MutationObserver(mutationsList => {
+        forEach.call(mutationsList, ({ attributeName, oldValue, target }) => {
+          instance.attributeChanged(
             attributeName,
-            mutation.oldValue,
-            (mutation.target as HTMLElement).getAttribute(attributeName)
+            oldValue,
+            (target as Element).getAttribute(attributeName)
           );
         });
       });
 
-      instance.$observer.observe(node, {
+      instance.observer = observer;
+
+      observer.observe(node, {
         attributes: true,
         attributeOldValue: true,
         attributeFilter,
       });
     }
 
-    callIfExists(instance.connectedCallback);
+    instance.connected();
   });
 };
 
-const disconnect = (node: HTMLElement) => {
-  const instance = node[propertyName];
+/**
+ * Cleans-up the component for a given node.
+ * @param node Node that has been removed from the DOM.
+ */
+const disconnect = (node: Element) => {
+  const instance = node[PROPERTY_NAME];
 
   if (!instance) {
     return;
   }
 
-  const observer = instance.$observer;
+  const observer = instance.observer;
   if (observer) {
     observer.disconnect();
   }
 
-  callIfExists(instance.disconnectedCallback);
+  instance.disconnected();
 
-  delete instance.$element;
-  delete node[propertyName];
+  forEach.call(instance.listeners, ({ eventName, node, listener, options }) =>
+    node.removeEventListener(eventName, listener, options)
+  );
+  instance.listeners = [];
+
+  delete instance.node[PROPERTY_NAME];
+  delete instance.node;
 };
 
-const connectAll = (parent: HTMLElement, onlyName?: string) => {
+/**
+ * Initializes components for given root node and its descendants.
+ * @param rootNode Root element of the tree that was added to the DOM.
+ * @param nameFilter Which components should be initialized, will be all defined if not provided.
+ */
+const connectAll = (rootNode: Element, nameFilter?: string) => {
   // 1 is Node.ELEMENT_NODE
-  if (parent.nodeType !== 1) {
+  if (rootNode.nodeType !== 1) {
     return;
   }
 
-  const names = onlyName ? registry[onlyName] : Object.keys(registry);
+  const names = nameFilter ? registry[nameFilter] : Object.keys(registry);
 
   forEach.call(names, (name: string) => {
     const element = registry[name];
-    const selector = element._options._selector;
+    const selector = element._options.selector;
 
-    if (parent.matches(selector)) {
-      connect(
-        parent,
-        name,
-        element._constructor
-      );
+    if (rootNode.matches(selector)) {
+      connect(rootNode, name, element._options, element._constructor);
     }
 
-    forEach.call(parent.querySelectorAll(selector), (node: HTMLElement) =>
-      connect(
-        node,
-        name,
-        element._constructor
-      )
+    forEach.call(rootNode.querySelectorAll(selector), (node: Element) =>
+      connect(node, name, element._options, element._constructor)
     );
   });
 };
 
-const disconnectAll = (parent: HTMLElement) => {
+/**
+ * Disconnects all components for given root node and its descendants.
+ * @param rootNode Root node which was removed from the DOM.
+ */
+const disconnectAll = (rootNode: Element) => {
   // 1 is Node.ELEMENT_NODE
-  if (parent.nodeType !== 1) {
+  if (rootNode.nodeType !== 1) {
     return;
   }
 
-  disconnect(parent);
+  disconnect(rootNode);
 
-  forEach.call(parent.querySelectorAll(`*`), disconnect);
+  forEach.call(rootNode.querySelectorAll(`*`), disconnect);
 };
 
-export default class AnyElementRegistry {
+export default class AnyElementsRegistry {
   public constructor() {
     new MutationObserver(mutationsList => {
       forEach.call(mutationsList, mutation => {
@@ -118,50 +150,60 @@ export default class AnyElementRegistry {
     connectAll(rootNode);
   }
 
+  /**
+   * Registers component with a given name and options.
+   * @param name Name of the component.
+   * @param constructor Constructor or a function that returns a promise resolving with a constructor.
+   * @param options Component's options.
+   */
   public define(
     name: string,
-    constructor: Function | PromiseLike<Function>,
-    options: { selector?: string; lazy?: boolean } = {}
+    constructor: Component | PromiseLike<Component>,
+    options: { selector?: string } = {}
   ): void {
     if (typeof name !== "string" || !name.match(/^[a-z][^A-Z]*\-[^A-Z]*$/)) {
-      throw new DOMException(`"${name}" is not a valid element name`);
-    }
-    if (this.get(name)) {
-      throw new DOMException(`'${name}' has already been declared`);
+      throw new Error(`"${name}" is not a valid component name`);
     }
 
     registry[name] = {
-      _constructor: !options.lazy ? () => constructor : constructor,
+      _constructor: constructor,
       _options: {
-        _selector: options.selector || name,
+        selector: options.selector || name,
       },
     };
 
     connectAll(rootNode, name);
 
-    if (promises[name]) {
-      promises[name].forEach(resolve => resolve());
-    }
+    forEach.call(promises[name] || [], resolve => resolve());
   }
 
+  /**
+   * Removes component with a given name from the registry.
+   * @param name Component's name.
+   */
   public undefine(name: string) {
     delete registry[name];
   }
 
-  public get(name: string): Function | PromiseLike<Function> {
-    return registry[name] ? registry[name]._constructor() : undefined;
+  /**
+   * Returns component's constructor or a function that returns a promise resolving to it for a given name.
+   * @param name Component's name.
+   */
+  public get(name: string): Component | PromiseLike<Component> {
+    return registry[name] ? registry[name]._constructor : undefined;
   }
 
+  /**
+   * Returns a promise that is going to be resolved when the component with given name gets defined.
+   * @param name Component's name.
+   */
   public whenDefined(name: string): Promise<void> {
     const promise = new Promise(resolve => {
       if (this.get(name)) {
-        resolve();
-      } else {
-        if (!promises[name]) {
-          promises[name] = [];
-        }
-        promises[name].push(resolve);
+        return resolve();
       }
+      promises[name] = promises[name] || [];
+      promises[name].push(resolve);
     }) as Promise<void>;
 
     return promise;
