@@ -21,6 +21,18 @@ npm install --save any-elements
 
 ## Usage
 
+### Registering a component
+
+```javascript
+import { Registry, Component } from "any-elements";
+
+class MyComponent extends Component {}
+
+Registry.define("my-component", MyComponent, { selector: ".my-component" });
+```
+
+### Lifecycle methods
+
 ```javascript
 import { Registry, Component } from "any-elements";
 
@@ -30,6 +42,39 @@ class MyComponent extends Component {
   }
   disconnected() {
     console.log("I got removed from the page!");
+  }
+}
+
+Registry.define("my-component", MyComponent, { selector: ".my-component" });
+```
+
+### Listening for attribute changes
+
+```javascript
+import { Registry, Component } from "any-elements";
+
+class MyComponent extends Component {
+  observedAttributes() {
+    return ["baz"];
+  }
+  attributeChanged(name, oldValue, newValue) {
+    console.log('Attribute "baz" has changed.");
+  }
+}
+
+Registry.define("my-component", MyComponent, { selector: ".my-component" });
+```
+
+### Attaching event listeners
+
+```javascript
+import { Registry, Component } from "any-elements";
+
+class MyComponent extends Component {
+  connected() {
+    this.attachEvent("click", function() {
+      console.log("My element was clicked!");
+    });
   }
 }
 
