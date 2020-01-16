@@ -1,11 +1,11 @@
 interface ComponentArguments {
-    node: Element;
+    node: HTMLElement;
     name: string;
     options?: {};
 }
 interface AttachedListener {
     eventName: string;
-    node: Element;
+    node: HTMLElement;
     listener: EventListenerOrEventListenerObject;
     options: boolean | EventListenerOptions;
 }
@@ -17,7 +17,7 @@ export default class Component {
     /**
      * DOM node attached with the component.
      */
-    node: Element;
+    node: HTMLElement;
     /**
      * Component's options.
      */
@@ -43,7 +43,20 @@ export default class Component {
      * Method invoked when component's node is removed from the DOM tree.
      */
     disconnected(): void;
+    /**
+     * Attaches event listener to a component so it can be cleaned-up automatically after it is removed from DOM.
+     * @param eventName Name of the event to listen for.
+     * @param listener Listener to invoke when event is triggered.
+     * @param options Event listener options.
+     */
     attachEvent(eventName: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): any;
-    attachEvent(eventName: string, delegate: Element, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): any;
+    /**
+     * Attaches event listener to a component so it can be cleaned-up automatically after it is removed from DOM.
+     * @param eventName Name of the event to listen for.
+     * @param delegate Child element which events will be listened.
+     * @param listener Listener to invoke when event is triggered.
+     * @param options Event listener options.
+     */
+    attachEvent(eventName: string, delegate: HTMLElement, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): any;
 }
 export {};

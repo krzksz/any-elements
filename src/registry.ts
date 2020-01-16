@@ -3,7 +3,7 @@ import Component from "./component";
 
 interface ComponentRegistry {
   [componentName: string]: {
-    _constructor: Component | PromiseLike<Component>;
+    _constructor: typeof Component | PromiseLike<typeof Component>;
     _options: {
       selector: string;
     };
@@ -25,7 +25,7 @@ const forEach = Array.prototype.forEach;
  * @param constructor Component class or a function returning a promise that resolves to it.
  */
 const connect = (
-  node: Element,
+  node: HTMLElement,
   name: string,
   options: {},
   constructor: any
@@ -48,7 +48,7 @@ const connect = (
           instance.attributeChanged(
             attributeName,
             oldValue,
-            (target as Element).getAttribute(attributeName)
+            (target as HTMLElement).getAttribute(attributeName)
           );
         });
       });
@@ -70,7 +70,7 @@ const connect = (
  * Cleans-up the component for a given node.
  * @param node Node that has been removed from the DOM.
  */
-const disconnect = (node: Element) => {
+const disconnect = (node: HTMLElement) => {
   const instance = node[PROPERTY_NAME];
 
   if (!instance) {
@@ -95,11 +95,11 @@ const disconnect = (node: Element) => {
 
 /**
  * Initializes components for given root node and its descendants.
- * @param rootNode Root element of the tree that was added to the DOM.
+ * @param rootNode Root HTMLElement of the tree that was added to the DOM.
  * @param nameFilter Which components should be initialized, will be all defined if not provided.
  */
-const connectAll = (rootNode: Element, nameFilter?: string) => {
-  // 1 is Node.ELEMENT_NODE
+const connectAll = (rootNode: HTMLElement, nameFilter?: string) => {
+  // 1 is Node.HTMLElement_NODE
   if (rootNode.nodeType !== 1) {
     return;
   }
@@ -107,15 +107,15 @@ const connectAll = (rootNode: Element, nameFilter?: string) => {
   const names = nameFilter ? registry[nameFilter] : Object.keys(registry);
 
   forEach.call(names, (name: string) => {
-    const element = registry[name];
-    const selector = element._options.selector;
+    const HTMLElement = registry[name];
+    const selector = HTMLElement._options.selector;
 
     if (rootNode.matches(selector)) {
-      connect(rootNode, name, element._options, element._constructor);
+      connect(rootNode, name, HTMLElement._options, HTMLElement._constructor);
     }
 
-    forEach.call(rootNode.querySelectorAll(selector), (node: Element) =>
-      connect(node, name, element._options, element._constructor)
+    forEach.call(rootNode.querySelectorAll(selector), (node: HTMLElement) =>
+      connect(node, name, HTMLElement._options, HTMLElement._constructor)
     );
   });
 };
@@ -124,8 +124,8 @@ const connectAll = (rootNode: Element, nameFilter?: string) => {
  * Disconnects all components for given root node and its descendants.
  * @param rootNode Root node which was removed from the DOM.
  */
-const disconnectAll = (rootNode: Element) => {
-  // 1 is Node.ELEMENT_NODE
+const disconnectAll = (rootNode: HTMLElement) => {
+  // 1 is Node.HTMLElement_NODE
   if (rootNode.nodeType !== 1) {
     return;
   }
@@ -135,12 +135,12 @@ const disconnectAll = (rootNode: Element) => {
   forEach.call(rootNode.querySelectorAll(`*`), disconnect);
 };
 
-export default class AnyElementsRegistry {
+export default class AnyHTMLElementsRegistry {
   public constructor() {
     new MutationObserver(mutationsList => {
       forEach.call(mutationsList, mutation => {
-        forEach.call(mutation.removedNodes, disconnectAll);
-        forEach.call(mutation.addedNodes, connectAll);
+        forEach.call(mutation.removedNodes || [], disconnectAll);
+        forEach.call(mutation.addedNodes || [], connectAll);
       });
     }).observe(rootNode, {
       childList: true,
@@ -158,7 +158,17 @@ export default class AnyElementsRegistry {
    */
   public define(
     name: string,
-    constructor: Component | PromiseLike<Component>,
+    constructor: typeof Component,
+    options: { selector?: string }
+  ): void;
+  public define(
+    name: string,
+    constructor: PromiseLike<typeof Component>,
+    options: { selector?: string }
+  ): void;
+  public define(
+    name: string,
+    constructor: typeof Component | PromiseLike<typeof Component>,
     options: { selector?: string } = {}
   ): void {
     if (typeof name !== "string" || !name.match(/^[a-z][^A-Z]*\-[^A-Z]*$/)) {
@@ -189,7 +199,7 @@ export default class AnyElementsRegistry {
    * Returns component's constructor or a function that returns a promise resolving to it for a given name.
    * @param name Component's name.
    */
-  public get(name: string): Component | PromiseLike<Component> {
+  public get(name: string): typeof Component | PromiseLike<typeof Component> {
     return registry[name] ? registry[name]._constructor : undefined;
   }
 

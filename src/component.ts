@@ -1,14 +1,14 @@
 import { PROPERTY_NAME } from "./constants";
 
 interface ComponentArguments {
-  node: Element;
+  node: HTMLElement;
   name: string;
   options?: {};
 }
 
 interface AttachedListener {
   eventName: string;
-  node: Element;
+  node: HTMLElement;
   listener: EventListenerOrEventListenerObject;
   options: boolean | EventListenerOptions;
 }
@@ -34,7 +34,7 @@ export default class Component {
   /**
    * DOM node attached with the component.
    */
-  public node: Element;
+  public node: HTMLElement;
   /**
    * Component's options.
    */
@@ -90,7 +90,7 @@ export default class Component {
    */
   public attachEvent(
     eventName: string,
-    delegate: Element,
+    delegate: HTMLElement,
     listener: EventListenerOrEventListenerObject,
     options?: boolean | AddEventListenerOptions
   );

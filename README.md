@@ -58,7 +58,7 @@ class MyComponent extends Component {
     return ["baz"];
   }
   attributeChanged(name, oldValue, newValue) {
-    console.log('Attribute "baz" has changed.");
+    console.log('Attribute "baz" has changed.');
   }
 }
 
