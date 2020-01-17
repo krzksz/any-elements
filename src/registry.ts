@@ -106,7 +106,7 @@ const connectAll = (rootNode: HTMLElement, nameFilter?: string) => {
 
   const names = nameFilter ? registry[nameFilter] : Object.keys(registry);
 
-  forEach.call(names, (name: string) => {
+  forEach.call(names || [], (name: string) => {
     const HTMLElement = registry[name];
     const selector = HTMLElement._options.selector;
 
